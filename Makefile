@@ -9,7 +9,7 @@ INCLUDES = -I$(LIBMNL_DIR)/install/usr/local/include -I$(LIBNFTNL_DIR)/install/u
 all: exploit
 
 exploit: $(exploit) $(LIBMNL_DIR) $(LIBNFTNL_DIR)
-	$(CC) $(CFLAGS) $(exploit) -o exploit $(INCLUDES) $(LIBS) 
+	$(CC) $(CFLAGS) $(exploit) -o PoC $(INCLUDES) $(LIBS) 
 
 
 clean:
