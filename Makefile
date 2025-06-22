@@ -1,18 +1,37 @@
 CC ?= gcc
-LIBMNL_DIR = $(realpath ./)/libmnl_build
-LIBNFTNL_DIR = $(realpath ./)/libnftnl_build
-exploit = exploit/exploit.c
-CFLAGS = -w -static -Wall
-LIBS = -L$(LIBMNL_DIR)/install/usr/local/lib -L$(LIBNFTNL_DIR)/install/usr/local/lib -lnftnl -lmnl -lpthread
-INCLUDES = -I$(LIBMNL_DIR)/install/usr/local/include -I$(LIBNFTNL_DIR)/install/usr/local/include
 
-all: exploit
+# Debug build flags
+CFLAGS  = -g3 -O0 -Wall -Wextra -fsanitize=address -fno-omit-frame-pointer -DDEBUG_OTTER \
+          $(shell pkg-config --cflags libmnl libnftnl)
+LDFLAGS = -fsanitize=address $(shell pkg-config --libs libmnl libnftnl) -lpthread
 
-exploit: $(exploit) $(LIBMNL_DIR) $(LIBNFTNL_DIR)
-	$(CC) $(CFLAGS) $(exploit) -o PoC $(INCLUDES) $(LIBS) 
+SRC_DEBUG = exploit/exploit_dbg.c
+BIN_DEBUG = PoC_dbg
 
+# Release build flags
+CFLAGS_REL  = -O2 -pipe -static $(shell pkg-config --cflags libmnl libnftnl)
+LDFLAGS_REL = -static $(shell pkg-config --libs libmnl libnftnl) -lpthread
+BIN_REL    = PoC
+
+.PHONY: all debug release run strip clean
+
+all: debug
+
+debug: $(BIN_DEBUG)
+
+$(BIN_DEBUG): $(SRC_DEBUG)
+	$(CC) $(CFLAGS) $^ -o $@ $(LDFLAGS)
+
+release: $(BIN_REL)
+
+$(BIN_REL): exploit/exploit.c
+	$(CC) $(CFLAGS_REL) $^ -o $@ $(LDFLAGS_REL)
+
+run: $(BIN_DEBUG)
+	ASAN_OPTIONS=detect_leaks=0:halt_on_error=1 ./$(BIN_DEBUG)
+
+# Alias for release build
+strip: release
 
 clean:
-	rm -f exploit 
-
-.PHONY: all exploit  clean
+	rm -f $(BIN_DEBUG) $(BIN_REL)
